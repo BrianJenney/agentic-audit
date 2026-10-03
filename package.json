@@ -1,0 +1,12 @@
+{
+  "name": "agentic-audit",
+  "version": "0.1.0",
+  "description": "Did your AI workflow actually make you ship more? Compare your git output before and after you changed how you work.",
+  "type": "module",
+  "bin": { "agentic-audit": "agentic-audit.mjs" },
+  "files": ["agentic-audit.mjs", "README.md", "LICENSE"],
+  "engines": { "node": ">=20" },
+  "keywords": ["ai", "claude-code", "git", "productivity", "agentic-engineering", "developer-metrics"],
+  "author": "Brian Jenney",
+  "license": "MIT"
+}
