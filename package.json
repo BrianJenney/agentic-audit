@@ -1,7 +1,8 @@
 {
   "name": "agentic-audit",
   "version": "0.1.0",
-  "description": "Did your AI workflow actually make you ship more? Compare your git output before and after you changed how you work.",
+  "description": "Compare your git output before and after your AI workflow. Built by Parsity.",
+  "homepage": "https://parsity.io/ai-dev",
   "type": "module",
   "bin": { "agentic-audit": "agentic-audit.mjs" },
   "files": ["agentic-audit.mjs", "README.md", "LICENSE"],

@@ -28,7 +28,8 @@ for (let i = 0; i < argv.length; i++) {
 }
 
 if (flags.help) {
-  console.log(`agentic-audit: compare your output before and after you changed your workflow
+  console.log(`agentic-audit: compare your output before and after you changed your AI workflow
+Built by Parsity: https://parsity.io/ai-dev
 
 Usage: npx github:BrianJenney/agentic-audit [repos...] [options]
 
@@ -586,7 +587,7 @@ ${kindMix ? `<h2>What kind of work</h2><p class="blurb">Share of graded commits 
   <div class="fix"><span class="fix-label">Fix</span><span>${esc(l.fix)}</span></div>
 </div>`).join('')}</div>
 <details><summary>How these are measured</summary><ul>${methodology.map((m) => `<li>${esc(m)}</li>`).join('')}</ul></details>
-<footer>Generated ${esc(new Date().toLocaleString())} by agentic-audit. Everything was computed on your machine.</footer>
+<footer>Generated ${esc(new Date().toLocaleString())} by agentic-audit, a before/after audit of your AI workflow. Everything was computed on your machine.<br>Want to move these numbers? <a href="https://parsity.io/ai-dev" style="color:var(--accent)">Parsity</a> teaches developers to get into the top 10% with agentic workflows.</footer>
 </div></body></html>`;
 }
 
@@ -623,7 +624,7 @@ function printTerminal(rows, notes, meta, limits = []) {
 
 // ---------- main ----------
 async function main() {
-  console.log('\nagentic-audit: did your new workflow actually move the needle?\n');
+  console.log('\nagentic-audit: compare your output before and after your AI workflow\nby Parsity, https://parsity.io/ai-dev\n');
 
   const repoArgs = [...positional, ...String(flags.repo || '').split(',')].map((x) => x.trim()).filter(Boolean);
   const repoAns = repoArgs.length ? repoArgs : String(await ask('Repo(s): local paths or owner/repo, comma-separated', process.cwd())).split(',').map((x) => x.trim()).filter(Boolean);
@@ -891,7 +892,7 @@ ${limits.map((l) => `- **${l.title}**${l.hit ? ' _(affects this report)_' : ''}.
 - **Agent-tagged commits** are commits whose author or trailers (Co-Authored-By, AI-Assisted, Generated with) name an AI tool.
 ${jev ? `- **Difficulty** comes from Jev (TypeSafe) grading ${jev[0]?.graded ?? 0} before and ${jev[1]?.graded ?? 0} after commits, sampled evenly across each window. Difficulty-weighted output = commits per week x average difficulty.\n` : ''}- Lines of code and commit counts are easy to game. Read them next to rework, fixes, tests and difficulty, never alone.
 
-_Generated ${new Date().toISOString()} by agentic-audit._
+_Generated ${new Date().toISOString()} by agentic-audit, a before/after audit of your AI workflow. Built by [Parsity](https://parsity.io/ai-dev)._
 `;
 
   const outDir = path.resolve(flags.out || process.cwd());

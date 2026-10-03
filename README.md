@@ -1,8 +1,10 @@
 # agentic-audit
 
-Is your AI workflow actually making you ship more, or just making you feel busy?
+Compare your output before and after you changed your AI workflow.
 
-Pick the date you changed how you work. This script compares the weeks before it to the weeks after it, using your own git history. You get a one-page report you can bring to your manager.
+Is Claude Code, Codex or Cursor actually making you ship more, or just making you feel busy? Pick the date you started working with agents. This script compares the weeks before it to the weeks after it, using your own git history. You get a one-page report you can bring to your manager.
+
+Built by [Parsity](https://parsity.io/ai-dev), where we teach developers to get into the top 10% with AI engineering and agentic workflows.
 
 ## Run it
 
@@ -96,3 +98,7 @@ The report has a section for this and flags which gaps affect your run. The shor
 - Codex token reading is best effort. Its log format changes.
 - Lockfiles, build output, vendored code and commits over 3,000 lines are ignored so a big codegen dump doesn't skew things.
 - Small samples lie. If you have fewer than 10 commits on either side, widen the window.
+
+## About
+
+Made by Brian Jenney at [Parsity](https://parsity.io/ai-dev). If the report shows your AI workflow isn't moving the numbers yet, that's what we work on.
