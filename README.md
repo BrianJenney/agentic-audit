@@ -6,11 +6,20 @@ Pick the date you changed how you work. This script compares the weeks before it
 
 ## Run it
 
-You need Node 20 or newer. Nothing to install. From inside any git repo:
+You need Node 20 or newer. Nothing to install.
 
 ```bash
+# the repo you're in
 npx github:BrianJenney/agentic-audit
+
+# one or more local repos
+npx github:BrianJenney/agentic-audit ~/dev/api ~/dev/web
+
+# any GitHub repo (cloned to a temp folder, last 2 years of history)
+npx github:BrianJenney/agentic-audit vercel/next.js --author you@example.com
 ```
+
+GitHub repos can be `owner/repo` or a full `github.com` URL. Private repos need to be cloned yourself first, then passed as a local path.
 
 Or grab the single file and run it:
 
@@ -21,7 +30,7 @@ node agentic-audit.mjs
 
 It asks you a few questions:
 
-1. Which repos (default: the one you're in)
+1. Which repos, if you didn't pass any (default: the one you're in)
 2. Your git email(s). It pre-fills every email you've committed under with your git name.
 3. The date you started the new workflow. It suggests one from when your commits started carrying AI co-author tags.
 4. How many weeks to compare on each side
@@ -78,7 +87,7 @@ The report has a section for this and flags which gaps affect your run. The shor
 | Claude Code deletes local logs after 30 days, and only this machine is visible. | Add `"cleanupPeriodDays": 365` to `~/.claude/settings.json` today. Use the Anthropic Console for team or API spend. |
 | Tokens are not dollars. Cached reads are cheap, and subscriptions are flat rate. | Read tokens as a trend. Check billing for real cost. |
 | Your company's internal agent isn't recognized. | The report lists unknown bot co-authors. Rerun with `--agents "your-bot-name"`. |
-| Commits under other emails are missed. | `git log --format='%ae' \| sort \| uniq -c`, then pass every email with `--author`. |
+| Commits under other emails are missed, including ones Claude authored directly. | `git log --format='%ae' \| sort \| uniq -c`, then pass every email with `--author` (add `noreply@anthropic.com` if Claude commits for you). |
 | Squash merges and rebases distort commit counts. | Add `--prs` to compare merged PRs instead. |
 | Without Jev there's no difficulty score. | Set `TYPESAFE_API_KEY` and rerun. |
 

@@ -15,21 +15,32 @@ const WEEK = 7 * DAY;
 // ---------- args ----------
 const argv = process.argv.slice(2);
 const flags = {};
+const positional = [];
+const BOOL_FLAGS = new Set(['yes', 'help', 'jev', 'no-jev', 'prs', 'no-prs', 'tokens', 'no-tokens', 'no-open']);
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
-  if (!a.startsWith('--')) continue;
-  const [k, v] = a.slice(2).split('=');
+  if (!a.startsWith('--')) { positional.push(a); continue; }
+  const [k, ...rest] = a.slice(2).split('=');
+  const v = rest.length ? rest.join('=') : undefined;
   if (v !== undefined) flags[k] = v;
-  else if (argv[i + 1] && !argv[i + 1].startsWith('--')) flags[k] = argv[++i];
+  else if (!BOOL_FLAGS.has(k) && argv[i + 1] && !argv[i + 1].startsWith('--')) flags[k] = argv[++i];
   else flags[k] = true;
 }
 
 if (flags.help) {
   console.log(`agentic-audit: compare your output before and after you changed your workflow
 
-Usage: node agentic-audit.mjs [options]   (asks for anything you leave out)
+Usage: npx github:BrianJenney/agentic-audit [repos...] [options]
 
-  --repo <paths>      Comma-separated repo paths (default: current directory)
+  repos               Local paths or GitHub repos (owner/repo or a github.com URL).
+                      Default: the current directory. GitHub repos are cloned to a temp folder.
+
+Examples:
+  npx github:BrianJenney/agentic-audit
+  npx github:BrianJenney/agentic-audit ~/dev/api ~/dev/web
+  npx github:BrianJenney/agentic-audit vercel/next.js --author you@example.com
+
+  --repo <paths>      Same as the repos argument, comma-separated
   --author <emails>   Comma-separated git emails (default: git config user.email)
   --cutoff <date>     YYYY-MM-DD, the day you started the new workflow
   --weeks <n>         Weeks to compare on each side (default: time since cutoff, max 12)
@@ -241,8 +252,43 @@ function median(arr) {
 }
 
 // ---------- PRs via gh ----------
+// ---------- resolving repo arguments ----------
+const repoLabels = new Map(); // local path -> display name
+const repoSlugs = new Map();  // local path -> owner/repo for gh
+
+function parseGitHub(arg) {
+  const m = /^(?:https?:\/\/github\.com\/|git@github\.com:|github\.com\/)?([\w.-]+)\/([\w.-]+?)(?:\.git)?\/?$/.exec(arg.trim());
+  return m ? `${m[1]}/${m[2]}` : null;
+}
+
+function resolveRepo(arg) {
+  const local = path.resolve(arg.replace(/^~(?=$|\/)/, os.homedir()));
+  if (fs.existsSync(local)) {
+    if (git(['rev-parse', '--git-dir'], local) === null) throw new Error(`${local} is not a git repo`);
+    repoLabels.set(local, path.basename(local));
+    return local;
+  }
+  const slug = parseGitHub(arg);
+  if (!slug) throw new Error(`Can't find "${arg}". Pass a local path, owner/repo, or a github.com URL.`);
+  const dir = path.join(os.tmpdir(), 'agentic-audit', slug.replace('/', '__'));
+  const since = new Date(Date.now() - 2 * 365 * DAY).toISOString().slice(0, 10);
+  if (fs.existsSync(path.join(dir, 'HEAD'))) {
+    process.stdout.write(`Updating ${slug}... `);
+    git(['fetch', '--quiet', `--shallow-since=${since}`, 'origin', '+refs/heads/*:refs/heads/*'], dir);
+  } else {
+    process.stdout.write(`Cloning ${slug} (last 2 years, no checkout)... `);
+    fs.mkdirSync(path.dirname(dir), { recursive: true });
+    const r = spawnSync('git', ['clone', '--bare', '--quiet', `--shallow-since=${since}`, `https://github.com/${slug}.git`, dir], { stdio: ['ignore', 'ignore', 'pipe'], encoding: 'utf8' });
+    if (r.status !== 0) throw new Error(`Couldn't clone ${slug}. Is it private? Clone it yourself and pass the local path.\n${(r.stderr || '').trim()}`);
+  }
+  console.log('done');
+  repoLabels.set(dir, slug);
+  repoSlugs.set(dir, slug);
+  return dir;
+}
+
 function prStats(repo, from, to, weeks) {
-  const out = run('gh', ['pr', 'list', '--author', '@me', '--state', 'merged', '--limit', '1000',
+  const out = run('gh', ['pr', 'list', ...(repoSlugs.has(repo) ? ['-R', repoSlugs.get(repo)] : []), '--author', '@me', '--state', 'merged', '--limit', '1000',
     '--search', `merged:${ymd(from)}..${ymd(new Date(to.getTime() - DAY))}`,
     '--json', 'number,additions,deletions,createdAt,mergedAt'], repo);
   if (out === null) return null;
@@ -579,9 +625,9 @@ function printTerminal(rows, notes, meta, limits = []) {
 async function main() {
   console.log('\nagentic-audit: did your new workflow actually move the needle?\n');
 
-  const repoAns = flags.repo || (await ask('Repo path(s), comma-separated', process.cwd()));
-  const repos = String(repoAns).split(',').map((s) => path.resolve(s.trim())).filter(Boolean);
-  for (const r of repos) if (git(['rev-parse', '--git-dir'], r) === null) throw new Error(`${r} is not a git repo`);
+  const repoArgs = [...positional, ...String(flags.repo || '').split(',')].map((x) => x.trim()).filter(Boolean);
+  const repoAns = repoArgs.length ? repoArgs : String(await ask('Repo(s): local paths or owner/repo, comma-separated', process.cwd())).split(',').map((x) => x.trim()).filter(Boolean);
+  const repos = repoAns.map(resolveRepo);
 
   // default authors: your configured email plus any other email used under your git name in these repos
   const myEmail = (git(['config', 'user.email'], repos[0]) || '').trim();
@@ -821,7 +867,7 @@ async function main() {
 
   const md = `# Agentic Workflow Audit
 
-**Repos:** ${repos.map((r) => path.basename(r)).join(', ')}
+**Repos:** ${repos.map((r) => repoLabels.get(r) || path.basename(r)).join(', ')}
 **Author:** ${authors.join(', ')}
 **Before:** ${ymd(before.from)} to ${ymd(new Date(before.to - 1))} (${fmt(before.weeks)} weeks, ${b.totalCommits} commits)
 **After:** ${ymd(after.from)} to ${ymd(new Date(after.to - 1))} (${fmt(after.weeks)} weeks, ${a.totalCommits} commits)
@@ -853,7 +899,7 @@ _Generated ${new Date().toISOString()} by agentic-audit._
   const mdPath = path.join(outDir, 'agentic-audit-report.md');
   fs.writeFileSync(mdPath, md);
   const meta = [
-    ['Repos', repos.map((r) => path.basename(r)).join(', ')],
+    ['Repos', repos.map((r) => repoLabels.get(r) || path.basename(r)).join(', ')],
     ['Author', authors.join(', ')],
     ['Before', `${ymd(before.from)} to ${ymd(new Date(before.to - 1))}, ${b.totalCommits} commits`],
     ['After', `${ymd(after.from)} to ${ymd(new Date(after.to - 1))}, ${a.totalCommits} commits`],
